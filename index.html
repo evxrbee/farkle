@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Farkle Game</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        body {
+            background-color: #1e1e2f;
+            color: #f0f0f0;
+            font-family: "Courier New", monospace;
+        }
+        .console {
+            background-color: #2b2b3c;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 700px;
+            margin: 30px auto;
+            white-space: pre-wrap;
+        }
+        input {
+            background-color: #444;
+            color: #f0f0f0;
+            border: none;
+            padding: 5px;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align:center;">Farkle Game</h1>
+    <div class="console" id="console"></div>
+
+    <py-script>
+import random
+from collections import Counter
+from pyscript import Element, input
+
+console = Element("console")
+
+def print_console(text):
+    console.write(text + "\n")
+
+# Roll dice
+def roll_dice(n):
+    return [random.randint(1,6) for _ in range(n)]
+
+# Score calculation
+def score_roll(dice):
+    if not dice:
+        return 0
+    count = Counter(dice)
+    score = 0
+
+    if sorted(set(dice)) == [1,2,3,4,5,6]:
+        return 1500
+    if len(count.values()) == 3 and all(v == 2 for v in count.values()):
+        return 1500
+    if len(count.values()) == 2 and all(v == 3 for v in count.values()):
+        return 2500
+    if 4 in count.values() and 2 in count.values():
+        return 1500
+    for die, qty in count.items():
+        if qty >= 3:
+            base = 1000 if die == 1 else die*100
+            multiplier = 2**(qty-3)
+            score += base*multiplier
+    ones_left = count[1] % 3
+    fives_left = count[5] % 3
+    score += ones_left*100 + fives_left*50
+    return score
+
+# Human turn
+def human_turn():
+    dice_remaining = 6
+    turn_score = 0
+    print_console("Your turn!")
+    while True:
+        roll = roll_dice(dice_remaining)
+        print_console(f"Dice rolled: {roll}")
+        if score_roll(roll) == 0:
+            print_console("Farkle! No points this turn.")
+            return 0
+        while True:
+            keep_input = input("Select dice to keep (space-separated numbers): ")
+            try:
+                keep_dice = [int(x) for x in keep_input.split()]
+            except:
+                print_console("Invalid input. Enter numbers separated by spaces.")
+                continue
+            temp_roll = roll.copy()
+            valid = True
+            for d in keep_dice:
+                if d in temp_roll:
+                    temp_roll.remove(d)
+                else:
+                    valid = False
+                    break
+            if not valid:
+                print_console("Invalid selection. Try again.")
+                continue
+            kept_score = score_roll(keep_dice)
+            if kept_score == 0:
+                print_console("Those dice do not score. Pick scoring dice.")
+                continue
+            turn_score += kept_score
+            dice_remaining -= len(keep_dice)
+            print_console(f"Score for these dice: {kept_score}, Turn total: {turn_score}")
+            break
+        if dice_remaining > 0:
+            choice = input(f"Roll remaining {dice_remaining} dice? (y/n): ").lower()
+            if choice != 'y':
+                print_console(f"You bank {turn_score} points this turn.")
+                return turn_score
+        else:
+            dice_remaining = 6
+            print_console("All dice used! Rolling all 6 again.")
+
+# Smarter, fair computer turn
+def computer_turn():
+    dice_remaining = 6
+    turn_score = 0
+    print_console("Computer's turn!")
+    while True:
+        roll = roll_dice(dice_remaining)
+        print_console(f"Computer rolled: {roll}")
+        if score_roll(roll) == 0:
+            print_console("Computer Farkled! No points this turn.")
+            return 0
+        count = Counter(roll)
+        keep_dice = []
+        for die, qty in count.items():
+            if qty >= 3 or die in [1,5]:
+                keep_dice.extend([die]*qty)
+        kept_score = score_roll(keep_dice)
+        turn_score += kept_score
+        dice_remaining -= len(keep_dice)
+        print_console(f"Computer keeps {keep_dice}, scores {kept_score}, turn total {turn_score}")
+        if dice_remaining <= 2 or turn_score >= 500:
+            print_console(f"Computer banks {turn_score} points this turn.")
+            return turn_score
+        if 300 <= turn_score < 500:
+            if random.random() < 0.5:
+                print_console("Computer decides to roll remaining dice.")
+            else:
+                print_console(f"Computer banks {turn_score} points this turn.")
+                return turn_score
+        if dice_remaining == 0:
+            dice_remaining = 6
+            print_console("Computer used all dice! Rolling all 6 again.")
+
+# Main game
+def main():
+    human_score = 0
+    computer_score = 0
+    winning_score = 10000
+    print_console("Welcome to Farkle! First to 10000 points wins.")
+    while human_score < winning_score and computer_score < winning_score:
+        print_console(f"\nScores - You: {human_score}, Computer: {computer_score}")
+        human_score += human_turn()
+        print_console(f"Scores after your turn - You: {human_score}, Computer: {computer_score}")
+        if human_score >= winning_score:
+            break
+        computer_score += computer_turn()
+        print_console(f"Scores after computer turn - You: {human_score}, Computer: {computer_score}")
+    print_console(f"\nFinal Scores - You: {human_score}, Computer: {computer_score}")
+    if human_score > computer_score:
+        print_console("You win!")
+    elif computer_score > human_score:
+        print_console("Computer wins!")
+    else:
+        print_console("It's a tie!")
+
+main()
+    </py-script>
+</body>
+</html>
