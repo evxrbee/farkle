@@ -3,174 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <title>Farkle Game</title>
-    <!-- PyScript required CSS & JS -->
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
     <style>
         body {
             background-color: #1e1e2f;
             color: #f0f0f0;
             font-family: monospace;
+            text-align: center;
         }
-        .console {
-            background-color: #2b2b3c;
-            padding: 20px;
+        #dice-container {
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .die {
+            width: 50px;
+            height: 50px;
+            line-height: 50px;
+            border: 2px solid #f0f0f0;
             border-radius: 10px;
-            max-width: 700px;
-            margin: 30px auto;
-            white-space: pre-wrap;
+            font-size: 24px;
+            cursor: pointer;
+            user-select: none;
         }
-        input {
+        .selected {
+            background-color: #f0f0f0;
+            color: #1e1e2f;
+            font-weight: bold;
+        }
+        button {
             background-color: #444;
             color: #f0f0f0;
             border: none;
-            padding: 5px;
+            padding: 10px 20px;
+            margin: 10px;
             border-radius: 5px;
-            margin-top: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #666;
+        }
+        #messages {
+            white-space: pre-wrap;
+            margin: 20px auto;
+            max-width: 700px;
+            text-align: left;
+            border: 1px solid #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #2b2b3c;
         }
     </style>
 </head>
 <body>
-    <h1 style="text-align:center;">Farkle Game</h1>
-    <div class="console" id="console"></div>
+    <h1>Farkle Game</h1>
+    <div id="scores">You: 0 | Computer: 0</div>
+    <div id="messages"></div>
+    <div id="dice-container"></div>
+    <button id="roll-btn">Roll Dice</button>
+    <button id="bank-btn">Bank Points</button>
 
-    <py-script>
-import random
-from collections import Counter
-from pyscript import Element, input
+    <script>
+        const diceContainer = document.getElementById('dice-container');
+        const rollBtn = document.getElementById('roll-btn');
+        const bankBtn = document.getElementById('bank-btn');
+        const messages = document.getElementById('messages');
+        const scoresDiv = document.getElementById('scores');
 
-console = Element("console")
+        let humanScore = 0;
+        let computerScore = 0;
+        let turnScore = 0;
+        let diceRemaining = 6;
+        let currentRoll = [];
+        let selectedDice = [];
 
-def print_console(text):
-    console.write(text + "\n")
+        const winningScore = 10000;
 
-def roll_dice(n):
-    return [random.randint(1,6) for _ in range(n)]
+        function log(msg) {
+            messages.textContent += msg + '\n';
+            messages.scrollTop = messages.scrollHeight;
+        }
 
-def score_roll(dice):
-    if not dice:
-        return 0
-    count = Counter(dice)
-    score = 0
-    if sorted(set(dice)) == [1,2,3,4,5,6]:
-        return 1500
-    if len(count.values()) == 3 and all(v == 2 for v in count.values()):
-        return 1500
-    if len(count.values()) == 2 and all(v == 3 for v in count.values()):
-        return 2500
-    if 4 in count.values() and 2 in count.values():
-        return 1500
-    for die, qty in count.items():
-        if qty >= 3:
-            base = 1000 if die == 1 else die*100
-            multiplier = 2**(qty-3)
-            score += base*multiplier
-    ones_left = count[1] % 3
-    fives_left = count[5] % 3
-    score += ones_left*100 + fives_left*50
-    return score
+        function rollDice(n) {
+            const result = [];
+            for (let i=0;i<n;i++) result.push(Math.floor(Math.random()*6)+1);
+            return result;
+        }
 
-def human_turn():
-    dice_remaining = 6
-    turn_score = 0
-    print_console("Your turn!")
-    while True:
-        roll = roll_dice(dice_remaining)
-        print_console(f"Dice rolled: {roll}")
-        if score_roll(roll) == 0:
-            print_console("Farkle! No points this turn.")
-            return 0
-        while True:
-            keep_input = input("Select dice to keep (space-separated numbers): ")
-            try:
-                keep_dice = [int(x) for x in keep_input.split()]
-            except:
-                print_console("Invalid input. Enter numbers separated by spaces.")
-                continue
-            temp_roll = roll.copy()
-            valid = True
-            for d in keep_dice:
-                if d in temp_roll:
-                    temp_roll.remove(d)
-                else:
-                    valid = False
-                    break
-            if not valid:
-                print_console("Invalid selection. Try again.")
-                continue
-            kept_score = score_roll(keep_dice)
-            if kept_score == 0:
-                print_console("Those dice do not score. Pick scoring dice.")
-                continue
-            turn_score += kept_score
-            dice_remaining -= len(keep_dice)
-            print_console(f"Score for these dice: {kept_score}, Turn total: {turn_score}")
-            break
-        if dice_remaining > 0:
-            choice = input(f"Roll remaining {dice_remaining} dice? (y/n): ").lower()
-            if choice != 'y':
-                print_console(f"You bank {turn_score} points this turn.")
-                return turn_score
-        else:
-            dice_remaining = 6
-            print_console("All dice used! Rolling all 6 again.")
+        function countValues(arr) {
+            const counts = {};
+            for (let d of arr) counts[d] = (counts[d] || 0) + 1;
+            return counts;
+        }
 
-def computer_turn():
-    dice_remaining = 6
-    turn_score = 0
-    print_console("Computer's turn!")
-    while True:
-        roll = roll_dice(dice_remaining)
-        print_console(f"Computer rolled: {roll}")
-        if score_roll(roll) == 0:
-            print_console("Computer Farkled! No points this turn.")
-            return 0
-        count = Counter(roll)
-        keep_dice = []
-        for die, qty in count.items():
-            if qty >= 3 or die in [1,5]:
-                keep_dice.extend([die]*qty)
-        kept_score = score_roll(keep_dice)
-        turn_score += kept_score
-        dice_remaining -= len(keep_dice)
-        print_console(f"Computer keeps {keep_dice}, scores {kept_score}, turn total {turn_score}")
-        if dice_remaining <= 2 or turn_score >= 500:
-            print_console(f"Computer banks {turn_score} points this turn.")
-            return turn_score
-        if 300 <= turn_score < 500:
-            if random.random() < 0.5:
-                print_console("Computer decides to roll remaining dice.")
-            else:
-                print_console(f"Computer banks {turn_score} points this turn.")
-                return turn_score
-        if dice_remaining == 0:
-            dice_remaining = 6
-            print_console("Computer used all dice! Rolling all 6 again.")
+        function scoreRoll(dice) {
+            if(dice.length === 0) return 0;
+            const counts = countValues(dice);
+            let score = 0;
 
-def main():
-    human_score = 0
-    computer_score = 0
-    winning_score = 10000
-    print_console("Welcome to Farkle! First to 10000 points wins.")
-    while human_score < winning_score and computer_score < winning_score:
-        print_console(f"\nScores - You: {human_score}, Computer: {computer_score}")
-        human_score += human_turn()
-        print_console(f"Scores after your turn - You: {human_score}, Computer: {computer_score}")
-        if human_score >= winning_score:
-            break
-        computer_score += computer_turn()
-        print_console(f"Scores after computer turn - You: {human_score}, Computer: {computer_score}")
-    print_console(f"\nFinal Scores - You: {human_score}, Computer: {computer_score}")
-    if human_score > computer_score:
-        print_console("You win!")
-    elif computer_score > human_score:
-        print_console("Computer wins!")
-    else:
-        print_console("It's a tie!")
+            // Straight 1-6
+            if(Object.keys(counts).length === 6) return 1500;
+            // Three pairs
+            if(Object.values(counts).filter(v=>v===2).length === 3) return 1500;
+            // Two triplets
+            if(Object.values(counts).filter(v=>v===3).length === 2) return 2500;
+            // Four + two
+            if(Object.values(counts).includes(4) && Object.values(counts).includes(2)) return 1500;
 
-main()
-    </py-script>
+            for(let die in counts){
+                let qty = counts[die];
+                die = parseInt(die);
+                if(qty>=3){
+                    let base = die===1?1000:die*100;
+                    score += base * Math.pow(2, qty-3);
+                }
+            }
+
+            const onesLeft = (counts[1] || 0) %3;
+            const fivesLeft = (counts[5] || 0) %3;
+            score += onesLeft*100 + fivesLeft*50;
+            return score;
+        }
+
+        function updateDiceUI() {
+            diceContainer.innerHTML = '';
+            currentRoll.forEach((die,i)=>{
+                const dieDiv = document.createElement('div');
+                dieDiv.textContent = die;
+                dieDiv.classList.add('die');
+                if(selectedDice.includes(i)) dieDiv.classList.add('selected');
+                dieDiv.addEventListener('click', ()=>{
+                    if(selectedDice.includes(i)){
+                        selectedDice = selectedDice.filter(x=>x!==i);
+                    } else {
+                        selectedDice.push(i);
+                    }
+                    updateDiceUI();
+                });
+                diceContainer.appendChild(dieDiv);
+            });
+        }
+
+        function startHumanTurn(){
+            turnScore = 0;
+            diceRemaining = 6;
+            log("\nYour turn!");
+            rollCurrentDice();
+        }
+
+        function rollCurrentDice(){
+            if(diceRemaining===0) diceRemaining=6;
+            currentRoll = rollDice(diceRemaining);
+            selectedDice = [];
+            updateDiceUI();
+            if(scoreRoll(currentRoll)===0){
+                log("Farkle! No points this turn.");
+                endHumanTurn(0);
+            }
+        }
+
+        rollBtn.addEventListener('click', ()=>{
+            if(selectedDice.length===0){
+                log("Select at least one scoring die first!");
+                return;
+            }
+            const keepDice = selectedDice.map(i=>currentRoll[i]);
+            const keptScore = scoreRoll(keepDice);
+            if(keptScore===0){
+                log("Selected dice do not score! Pick scoring dice.");
+                return;
+            }
+            turnScore += keptScore;
+            diceRemaining -= keepDice.length;
+            log(`Kept ${keepDice}, scored ${keptScore}. Turn total: ${turnScore}`);
+            selectedDice=[];
+            currentRoll=currentRoll.filter((_,i)=>!selectedDice.includes(i));
+            updateDiceUI();
+        });
+
+        bankBtn.addEventListener('click', ()=>{
+            endHumanTurn(turnScore);
+        });
+
+        function endHumanTurn(score){
+            humanScore += score;
+            updateScores();
+            if(humanScore>=winningScore){
+                log("You win!");
+                rollBtn.disabled=true;
+                bankBtn.disabled=true;
+            } else {
+                setTimeout(startComputerTurn,1000);
+            }
+        }
+
+        function updateScores(){
+            scoresDiv.textContent = `You: ${humanScore} | Computer: ${computerScore}`;
+        }
+
+        function startComputerTurn(){
+            log("\nComputer's turn!");
+            let compTurnScore = 0;
+            let compDice = 6;
+            while(true){
+                let roll = rollDice(compDice);
+                log(`Computer rolled: ${roll}`);
+                if(scoreRoll(roll)===0){
+                    log("Computer Farkled! No points this turn.");
+                    break;
+                }
+                const counts = countValues(roll);
+                const keepDice = [];
+                for(let die in counts){
+                    let d=parseInt(die), q=counts[die];
+                    if(q>=3 || d===1 || d===5){
+                        for(let k=0;k<q;k++) keepDice.push(d);
+                    }
+                }
+                let keptScore = scoreRoll(keepDice);
+                compTurnScore += keptScore;
+                compDice -= keepDice.length;
+                log(`Computer keeps ${keepDice}, scores ${keptScore}, turn total ${compTurnScore}`);
+                if(compDice<=2 || compTurnScore>=500) break;
+                if(compDice===0) compDice=6;
+            }
+            computerScore += compTurnScore;
+            updateScores();
+            if(computerScore>=winningScore){
+                log("Computer wins!");
+                rollBtn.disabled=true;
+                bankBtn.disabled=true;
+            } else {
+                startHumanTurn();
+            }
+        }
+
+        // Start game
+        startHumanTurn();
+    </script>
 </body>
 </html>
+
 
 
