@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Farkle Game</title>
+    <!-- PyScript required CSS & JS -->
     <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
     <script defer src="https://pyscript.net/latest/pyscript.js"></script>
     <style>
         body {
             background-color: #1e1e2f;
             color: #f0f0f0;
-            font-family: "Courier New", monospace;
+            font-family: monospace;
         }
         .console {
             background-color: #2b2b3c;
@@ -43,17 +44,14 @@ console = Element("console")
 def print_console(text):
     console.write(text + "\n")
 
-# Roll dice
 def roll_dice(n):
     return [random.randint(1,6) for _ in range(n)]
 
-# Score calculation
 def score_roll(dice):
     if not dice:
         return 0
     count = Counter(dice)
     score = 0
-
     if sorted(set(dice)) == [1,2,3,4,5,6]:
         return 1500
     if len(count.values()) == 3 and all(v == 2 for v in count.values()):
@@ -72,7 +70,6 @@ def score_roll(dice):
     score += ones_left*100 + fives_left*50
     return score
 
-# Human turn
 def human_turn():
     dice_remaining = 6
     turn_score = 0
@@ -118,7 +115,6 @@ def human_turn():
             dice_remaining = 6
             print_console("All dice used! Rolling all 6 again.")
 
-# Smarter, fair computer turn
 def computer_turn():
     dice_remaining = 6
     turn_score = 0
@@ -151,7 +147,6 @@ def computer_turn():
             dice_remaining = 6
             print_console("Computer used all dice! Rolling all 6 again.")
 
-# Main game
 def main():
     human_score = 0
     computer_score = 0
@@ -177,3 +172,4 @@ main()
     </py-script>
 </body>
 </html>
+
